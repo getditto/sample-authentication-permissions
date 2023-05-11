@@ -30,14 +30,14 @@ final class DittoManager: ObservableObject {
     @Published private(set) var doc001Text = ""
 
     private init() {
-        DittoLogger.minimumLogLevel = .verbose
+        DittoLogger.minimumLogLevel = .debug
     }
 
     func startDitto(loginToken: String) {
         authDelegate.loginToken = loginToken
 
         if let ditto = ditto, ditto.isSyncActive {
-            authDelegate.logout()
+            authDelegate.logout(ditto: ditto)
             self.ditto = nil
         }
 
@@ -108,9 +108,6 @@ final class DittoManager: ObservableObject {
 final class AuthDelegate: DittoAuthenticationDelegate {
 
     var loginToken: String? = nil
-
-    private var loggedInAuthenticator: DittoAuthenticator? = nil
-
     private let loginProvider = "replit-auth" // This needs to setup in https://portal.ditto.live
 
 
@@ -125,21 +122,18 @@ final class AuthDelegate: DittoAuthenticationDelegate {
     private func login(_ authenticator: DittoAuthenticator) {
         guard let loginToken = loginToken else { assertionFailure(); return }
 
-        authenticator.loginWithToken(loginToken, provider: loginProvider)  { [weak self] error in
-            guard let self = self else { return }
-
+        authenticator.loginWithToken(loginToken, provider: loginProvider)  { error in
             if let error = error {
                 print("Login request failed. Error: \(error.localizedDescription))")
             } else {
                 print("Login request succeeded. UserID: \(String(describing: authenticator.status.userID))")
-                loggedInAuthenticator = authenticator
             }
         }
     }
 
-    fileprivate func logout() {
+    fileprivate func logout(ditto: Ditto) {
         // This will stop sync, shut down all replication sessions, and remove any cached authentication credentials.
-        loggedInAuthenticator?.logout() { _ in
+        ditto.auth?.logout() { _ in
 
             // This will evict local data after logout
             DittoManager.shared.evictAll()
