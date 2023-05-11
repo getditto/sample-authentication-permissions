@@ -1,0 +1,87 @@
+
+!default.mode1v3
+!default.mode2v3
+!default.pbxuser
+!default.perspectivev3
+#
+# *.xcodeproj
+# *.xcworkspace
+# .swiftpm
+# Accio dependency management
+# Add this line if you want to avoid checking in source code from Carthage dependencies.
+# Add this line if you want to avoid checking in source code from Swift Package Manager dependencies.
+# Add this line if you want to avoid checking in source code from the Xcode workspace
+# After new code Injection tools there's a generated folder /iOSInjectionProject
+# Carthage
+# Carthage/Checkouts
+# CocoaPods
+# Code Injection
+# For more information about the recommended setup visit:
+# Instead, use fastlane to re-generate the screenshots whenever they are needed.
+# It is recommended to not store the screenshots in the git repo.
+# Package.pins
+# Package.resolved
+# Packages/
+# Pods/
+# Swift Package Manager
+# We recommend against adding the Pods directory to your .gitignore. However
+# Xcode
+# Xcode automatically generates this directory with a .xcworkspacedata file and xcuserdata
+# fastlane
+# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+# hence it is not needed unless you have added a package configuration file to your project
+# https://docs.fastlane.tools/best-practices/source-control/#source-control
+# https://github.com/johnno1962/injectionforxcode
+# https://guides.cocoapods.org/using/using-cocoapods.html#should-i-check-the-pods-directory-into-source-control
+# you should judge for yourself, the pros and cons are mentioned at:
+## App packaging
+## Obj-C/Swift specific
+## Playgrounds
+## User settings
+## compatibility with Xcode 3 and earlier (ignoring not required starting Xcode 4)
+## compatibility with Xcode 8 and earlier (ignoring not required starting Xcode 9)
+*.DS_Store
+*.apk
+*.dSYM
+*.dSYM.zip
+*.hmap
+*.ipa
+*.mode1v3
+*.mode2v3
+*.moved-aside
+*.pbxuser
+*.perspectivev3
+*.xccheckout
+*.xcscmblueprint
+.accio/
+.build/
+.idea
+.vs/
+.vscode/
+/fastlane/.env
+/fastlane/builds
+/fastlane/credentials
+/vendor/bundle
+Carthage/Build/
+Dependencies/
+DerivedData/
+bin/
+build/
+fastlane/Preview.html
+fastlane/report.xml
+fastlane/screenshots/**/*.png
+fastlane/test_output
+iOSInjectionProject/
+obj/
+playground.xcworkspace
+timeline.xctimeline
+xcuserdata/
+
+.idea/
+.gradle/
+.vscode/
+local.properties
+
+# Environment Variable
+.env
+Env.swift
