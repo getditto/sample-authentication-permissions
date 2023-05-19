@@ -6,26 +6,14 @@ let app = express()
 
 app.use(cors())
 app.use(body.json())
-let users = {}
-
-function checkToken (token) {
-  let userId = users[token]
-  if (!userId) {
-    users[token] = nanoid()
-  }
-  return { 
-    userId: users[token]
-  } 
-}
 
 app.post('/', async (req, res) => {
   const token = req.body.token;
   try {
-    const { userId } = await checkToken(token)
     res.json({
       "authenticate": true,
       "expirationSeconds": 28800,
-      "userID": userId,
+      "userID": '1234', // CHANGE ME
       "permissions": {
         "read": {
           "everything": true,
@@ -40,7 +28,7 @@ app.post('/', async (req, res) => {
   } catch (err) {
     console.error(err)
     res.json({
-      "authenticate": err,
+      "authenticate": false,
       "userInfo": err.message
     }) 
   }
