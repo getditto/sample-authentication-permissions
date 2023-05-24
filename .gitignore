@@ -85,3 +85,5 @@ local.properties
 # Environment Variable
 .env
 Env.swift
+
+node_modules
