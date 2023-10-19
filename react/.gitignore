@@ -20,4 +20,6 @@
 
 npm-debug.log*
 yarn-debug.log*
+*.js
+*.jsx
 yarn-error.log*
