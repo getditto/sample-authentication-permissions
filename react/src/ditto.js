@@ -5,10 +5,10 @@ export default function get(token) {
   if (!ditto) {
     const authHandler = {
       authenticationRequired: async function (authenticator) {
-        authenticator.loginWithToken(token, 'my-auth')
+        authenticator.loginWithToken(token, 'replit-auth')
       },
       authenticationExpiringSoon: function (authenticator, secondsRemaining) {
-        authenticator.loginWithToken(token, 'my-auth')
+        authenticator.loginWithToken(token, 'replit-auth')
       },
     }
     const identity = {

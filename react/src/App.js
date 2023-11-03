@@ -20,9 +20,11 @@ function App() {
       });
       
       ditto = Ditto(accessToken)
-      liveQuery = ditto.store.collection('cars').findAll().observe((tickets) => {
-        setCars(tickets.length)
-      })
+      liveQuery = ditto.store.collection('cars')
+				.findAll()
+				.observeLocal((tickets) => {
+					setCars(tickets.length)
+				})
     }
     
     if (user) {
