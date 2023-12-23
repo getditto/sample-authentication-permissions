@@ -5,8 +5,8 @@ export default function get() {
   if (!ditto) {
     const identity: IdentityOnlinePlayground = {
       type: 'onlinePlayground',
-      appID: "",
-      token: ""
+      appID: "REPLACE_WITH_YOUR_APP_ID",
+      token: "REPLACE_WITH_YOUR_TOKEN"
     }
     ditto = new Ditto(identity, '/ditto')
     ditto.startSync()

@@ -1,27 +1,24 @@
 import React, { useState, useEffect  } from "react";
 import './App.css';
 import DittoManager from "./ditto"
-import { Ditto, LiveQuery } from "@dittolive/ditto";
+import { Ditto } from "@dittolive/ditto";
 
 let ditto: Ditto
-let liveQuery: LiveQuery
 function App() {
   const [cars, setCars] = useState(0)
   const [error, setError] = useState('')
 
   useEffect(() => {
     async function startDitto() {
-      
       ditto = DittoManager()
-      liveQuery = ditto.store.collection('cars').findAll().observeLocal((tickets) => {
-        setCars(tickets.length)
-      })
+      ditto.store.registerObserver(`
+        SELECT *
+        FROM cars`,
+        (result) => {
+          setCars(result.items.length)
+        })
     }
-    
     startDitto()
-    return () => {
-      liveQuery?.stop()
-    }
   }, []);
 
   function onAddClick (){
