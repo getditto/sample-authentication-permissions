@@ -22,6 +22,7 @@ See an authentication example running on a server that handles three different p
 ## What is in this repository
 
 * [iOS](./iOS/Simple/): Basic example for using authentication on the iOS. 
+* [Flutter](./flutter/): Basic example for using authentication on Flutter.
 * [react](./react/): Basic example for authentication on Front-end React
 * [iOS-Auth0](./iOS/iOS-auth0/): A more advanced example for integrating iOS with Auth0, the popular platform for third-party authentication. 
 * [server](./server/): Examples for deploying your webhook with server-side authentication.
