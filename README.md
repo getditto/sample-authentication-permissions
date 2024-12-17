@@ -1,11 +1,6 @@
 # Authentication and Permissions
 
 Here you will find examples for how to implement authentication and permissions for Ditto, a peer-to-peer database.
-
-
- <img align="left" src="Ditto_logo.png" alt="Ditto Logo" width="150">  
- <br />  
-
  
 Ditto does not come with an identity provider. Using "Online With Authentication" requires that you have your own identity provider already set up. Each app can use multiple identity providers.
 
