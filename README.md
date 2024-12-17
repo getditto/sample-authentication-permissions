@@ -13,6 +13,8 @@ The "Online With Authentication" identity type is geared towards apps that will 
 
 [For more information, read the documentation](https://docs.ditto.live/ios/common/security/authentication)
 
+For support, please contact Ditto Support (support@ditto.live).
+
 ## Try it on repl.it
 
 See an authentication example running on a server that handles three different permissions levels. 
