@@ -13,7 +13,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # We may have a build of the Ditto SDK with Address Sanitizer enabled, so we
 # need compatible build flags.
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-  add_compile_options(-Wno-deprecated-declarations)
+  add_compile_options(-Wno-deprecated-declarations -Wno-delete-abstract-non-virtual-dtor)
 
   # Enable Address Sanitizer
   add_compile_options(-fsanitize=address -fno-omit-frame-pointer)
@@ -30,7 +30,7 @@ endif()
 # 16MB) to encode dwarf unwind offsets in compact unwind table, performance of
 # exception handling might be affected" warnings
 if(APPLE)
-    add_link_options("$<$<LINK_LANGUAGE:CXX>:-Wl,-no_compact_unwind>")
+  add_link_options("$<$<LINK_LANGUAGE:CXX>:-Wl,-no_compact_unwind>")
 endif()
 
 
@@ -42,4 +42,3 @@ add_executable(dittocppauth ${SOURCES})
 
 target_include_directories(dittocppauth PRIVATE sdk)
 target_link_libraries(dittocppauth PRIVATE ${CMAKE_SOURCE_DIR}/sdk/libditto.a)
-

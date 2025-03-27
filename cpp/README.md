@@ -3,10 +3,12 @@
 This is a simple command-line-interface application that demonstrates how to
 implement various authentication schemes using the Ditto C++ SDK.
 
+For more information about Ditto's authentication and authorization mechanisms,
+see <https://docs.ditto.live/key-concepts/authentication-and-authorization>.
+
+## Usage
+
 ```
-Ditto C++ SDK Authentication Sample
-
-
 dittocppauth [OPTIONS] SUBCOMMAND
 
 
@@ -21,44 +23,73 @@ OPTIONS:
                                                             Device name
 
 SUBCOMMANDS:
+offline-playground
+
+OPTIONS:
+  -t,               --offline-only-license-token TEXT (Env:DITTO_OFFLINE_ONLY_LICENSE_TOKEN)
+
+
 online-playground
 
 OPTIONS:
   -t,               --online-playground-token TEXT REQUIRED (Env:DITTO_PLAYGROUND_TOKEN)
                                                             Online playground token
-                    --cloud-sync, --no-cloud_sync{false}    Enable Ditto cloud sync
+                    --cloud-sync, --no-cloud_sync{false} (Env:DITTO_CLOUD_SYNC)
+                                                            Enable Ditto cloud sync
                     --custom-auth-url TEXT (Env:DITTO_CUSTOM_AUTH_URL)
 
 
-offline-playground
+online-with-authentication
 
 OPTIONS:
-  -t,               --offline-only-license-token TEXT (Env:DITTO_OFFLINE_ONLY_LICENSE_TOKEN)
+                    --provider TEXT
+  -t,               --online-token TEXT (Env:DITTO_ONLINE_TOKEN)
+                                                            Authentication token
+                    --username TEXT (Env:DITTO_USERNAME)    User name
+                    --password TEXT (Env:DITTO_PASSWORD)    Password
+                    --cloud-sync, --no-cloud_sync{false} (Env:DITTO_CLOUD_SYNC)
+                                                            Enable Ditto cloud sync
+                    --custom-auth-url TEXT (Env:DITTO_CUSTOM_AUTH_URL)
+                                                            Custom authentication URL
 ```
+
+### Environment Variables
 
 Most command-line options can alternatively be specified by setting environment variables.
 
 | Option                        | Environment variable               |
 | ----------------------------- | ---------------------------------- |
 | `--app-id`                    | `DITTO_APP_ID`                     |
+| `--cloud-sync`                | `DITTO_CLOUD_SYNC`                 |
 | `--custom-auth-url`           | `DITTO_CUSTOM_AUTH_URL`            |
 | `--device-name`               | `DITTO_DEVICE_NAME`                |
 | `--export-logs`               | `DITTO_EXPORT_LOGS_PATH`           |
 | `--log-level`                 | `DITTO_LOG_LEVEL`                  |
 | `--offline-only-access-token` | `DITTO_OFFLINE_ONLY_LICENSE_TOKEN` |
 | `--online-playground-token`   | `DITTO_PLAYGROUND_TOKEN`           |
+| `--online-token`              | `DITTO_ONLINE_TOKEN`               |
+| `--password`                  | `DITTO_PASSWORD`                   |
 | `--persistence-directory`     | `DITTO_PERSISTENCE_DIR`            |
+| `--username`                  | `DITTO_USERNAME`                   |
 
+### Usage Examples
 
-## Example Usage
+Use your own values for placeholders like `<APPID>` and `<TOKEN>` in the examples below.
 
-Use your own values for placeholders like `<APPID>` and `<TOKEN>`.
+#### Online Playground
 
 ```
-build/dittocppauth --app-id <APPID> online-playground --token <TOKEN> --cloud-sync
+dittocppauth --app-id <APPID> online-playground --token <TOKEN> --cloud-sync
 ```
 
-## Prerequisites
+#### Online with Authentication
+
+```
+dittocppauth --app-id <APPID> online-with-authentication \
+  --provider <PROVIDER> --online-token <TOKEN> --custom-auth-url <URL>
+```
+
+## Prerequisites for Building the Application
 
 - CMake 3.14 or later
 - Make
