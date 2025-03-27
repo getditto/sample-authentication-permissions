@@ -61,6 +61,38 @@ void online_playground_authentication(const std::string &token, bool cloud_sync,
   ditto.stop_sync();
 }
 
+void offline_playground_authentication(
+    const std::string &offline_only_license_token) {
+  ditto::Log::set_minimum_log_level(to_log_level(cli_options.log_level));
+  ditto::Log::set_logging_enabled(true);
+
+  // Note: OfflinePlayground allows an optional `site_id` parameter, but it is
+  // deprecated.
+  auto identity = ditto::Identity::OfflinePlayground(cli_options.app_id);
+
+  auto ditto = ditto::Ditto(identity, cli_options.persistence_dir);
+  ditto.set_device_name(cli_options.device_name);
+  ditto.disable_sync_with_v3();
+  std::cerr
+      << "info: Ditto instance initialized with offline-playground identity"
+      << std::endl;
+
+  if (!offline_only_license_token.empty()) {
+    ditto.set_offline_only_license_token(offline_only_license_token);
+    ditto.start_sync();
+    std::cerr << "info: sync started" << std::endl;
+  } else {
+    std::cerr
+        << "warning: cannot sync because no offline-only license token was "
+           "provided"
+        << std::endl;
+  }
+
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  std::cerr << "info: cleaning up" << std::endl;
+}
+
 void export_logs(const std::string &path) {
   try {
     if (std::filesystem::exists(path)) {
@@ -105,14 +137,15 @@ int main(int argc, const char **argv) {
         ->option_text("PATH")
         ->envname("DITTO_EXPORT_LOGS_PATH");
 
-    app.add_option("-n,--name", cli_options.device_name, "Device name");
+    app.add_option("-n,--device-name", cli_options.device_name, "Device name")
+        ->envname("DITTO_DEVICE_NAME");
 
     // Subcommands
 
     auto online_playground = app.add_subcommand("online-playground");
     std::string online_playground_token;
     online_playground
-        ->add_option("-t,--token", online_playground_token,
+        ->add_option("-t,--online-playground-token", online_playground_token,
                      "Online playground token")
         ->required()
         ->envname("DITTO_PLAYGROUND_TOKEN");
@@ -130,6 +163,15 @@ int main(int argc, const char **argv) {
                                        online_playground_cloud_sync,
                                        online_playground_custom_auth_url);
     });
+
+    std::string offline_only_license_token;
+    auto offline_playground = app.add_subcommand("offline-playground");
+    offline_playground
+        ->add_option("-t,--offline-only-license-token",
+                     offline_only_license_token)
+        ->envname("DITTO_OFFLINE_ONLY_LICENSE_TOKEN");
+    offline_playground->callback(
+        [&] { offline_playground_authentication(offline_only_license_token); });
 
     CLI11_PARSE(app, argc, argv);
 

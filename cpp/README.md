@@ -4,6 +4,9 @@ This is a simple command-line-interface application that demonstrates how to
 implement various authentication schemes using the Ditto C++ SDK.
 
 ```
+Ditto C++ SDK Authentication Sample
+
+
 dittocppauth [OPTIONS] SUBCOMMAND
 
 
@@ -14,17 +17,38 @@ OPTIONS:
   -p,               --persistence-directory TEXT [/tmp/ditto/dittocpppauth]  (Env:DITTO_PERSISTENCE_DIR)
   -l,               --log-level LEVEL                       error, warning, info, debug, or verbose
                     --export-logs PATH                      Export collected logs to this path
-  -n,               --name TEXT [dittocppauth]              Device name
+  -n,               --device-name TEXT [dittocppauth]  (Env:DITTO_DEVICE_NAME)
+                                                            Device name
 
 SUBCOMMANDS:
 online-playground
 
 OPTIONS:
-  -t,               --token TEXT REQUIRED (Env:DITTO_PLAYGROUND_TOKEN)
+  -t,               --online-playground-token TEXT REQUIRED (Env:DITTO_PLAYGROUND_TOKEN)
                                                             Online playground token
                     --cloud-sync, --no-cloud_sync{false}    Enable Ditto cloud sync
                     --custom-auth-url TEXT (Env:DITTO_CUSTOM_AUTH_URL)
+
+
+offline-playground
+
+OPTIONS:
+  -t,               --offline-only-license-token TEXT (Env:DITTO_OFFLINE_ONLY_LICENSE_TOKEN)
 ```
+
+Most command-line options can alternatively be specified by setting environment variables.
+
+| Option                        | Environment variable               |
+| ----------------------------- | ---------------------------------- |
+| `--app-id`                    | `DITTO_APP_ID`                     |
+| `--custom-auth-url`           | `DITTO_CUSTOM_AUTH_URL`            |
+| `--device-name`               | `DITTO_DEVICE_NAME`                |
+| `--export-logs`               | `DITTO_EXPORT_LOGS_PATH`           |
+| `--log-level`                 | `DITTO_LOG_LEVEL`                  |
+| `--offline-only-access-token` | `DITTO_OFFLINE_ONLY_LICENSE_TOKEN` |
+| `--online-playground-token`   | `DITTO_PLAYGROUND_TOKEN`           |
+| `--persistence-directory`     | `DITTO_PERSISTENCE_DIR`            |
+
 
 ## Example Usage
 

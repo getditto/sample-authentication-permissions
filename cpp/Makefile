@@ -48,6 +48,11 @@ run-online-playground: build ## Builds and runs the online-playground subcommand
 	# Note: env variables must be set for required parameters
 	${BUILD_DIR}/dittocppauth online-playground
 
+.PHONY: run-offline-playground
+run-offline-playground: build ## Builds and runs the offline-playground subcommand
+	# Note: env variables must be set for required parameters
+	${BUILD_DIR}/dittocppauth offline-playground
+
 .PHONY: xcode
 xcode: ## Generates an Xcode project in the build-xcode directory
 	mkdir -p $(XCODE_BUILD_DIR)
