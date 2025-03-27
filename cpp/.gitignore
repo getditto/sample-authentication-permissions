@@ -1,0 +1,9 @@
+build
+build-xcode
+.DS_Store
+Ditto.h
+libditto.a
+libditto.dylib
+.vscode
+.env
+*.jsonl.gz
