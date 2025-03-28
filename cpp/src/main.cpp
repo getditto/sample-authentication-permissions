@@ -174,7 +174,7 @@ private:
   }
 
 public:
-  AuthCallback(std::string token, std::string provider, std::string username,
+  AuthCallback(std::string provider, std::string token, std::string username,
                std::string password)
       : provider(std::move(provider)), token(std::move(token)),
         username(std::move(username)), password(std::move(password)) {}
@@ -467,12 +467,11 @@ int main(int argc, const char **argv) {
     // shared-key
     auto shared_key =
         app.add_subcommand("shared-key", "Simple shared-secret authentication");
-    std::string shared_key_key;
+    std::string secret_key;
     shared_key
-        ->add_option("-k,--key", shared_key_key,
-                     "Base-64 encoded DER private key")
+        ->add_option("-k,--key", secret_key, "Base-64 encoded DER private key")
         ->envname("DITTOCPPAUTH_SHARED_KEY");
-    shared_key->callback([&] { shared_key_auth(shared_key_key); });
+    shared_key->callback([&] { shared_key_auth(secret_key); });
 
     // manual
     auto manual = app.add_subcommand(

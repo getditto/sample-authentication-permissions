@@ -58,6 +58,20 @@ run-online-with-authentication: build ## Builds and runs the online-with-authent
 	# Note: env variables must be set for required parameters
 	${BUILD_DIR}/dittocppauth online-with-authentication
 
+.PHONY: run-shared-key
+run-shared-key: build ## Builds and runs the shared-key subcommand
+	# Note: env variables must be set for required parameters
+	${BUILD_DIR}/dittocppauth shared-key
+
+.PHONY: run-manual
+run-manual: build ## Builds and runs the manual subcommand
+	# Note: env variables must be set for required parameters
+	${BUILD_DIR}/dittocppauth manual
+
+.PHONY: run-print-sdk-version
+run-print-sdk-version: build ## Builds and runs the print-sdk-version subcommand
+	${BUILD_DIR}/dittocppauth print-sdk-version
+
 .PHONY: xcode
 xcode: ## Generates an Xcode project in the build-xcode directory
 	mkdir -p $(XCODE_BUILD_DIR)
