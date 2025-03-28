@@ -12,11 +12,11 @@ TAR ?= tar
 BUILD_DIR = build
 XCODE_BUILD_DIR = build-xcode
 
-CPP_SRC_FILES = $(shell find src test -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) ! -name 'doctest.h')
+CPP_SRC_FILES = $(shell find src -type f \( -name '*.cpp' -o -name '*.h' -o -name '*.hpp' \) ! -name 'CLI11.hpp')
 
 # Ditto C++ SDK download location
-DITTO_SDK_URL ?= https://software.ditto.live/cpp-linux-x86_64/Ditto/4.9.4/dist/Ditto.tar.gz
-#DITTO_SDK_URL ?= https://software.ditto.live/cpp-linux-aarch64/Ditto/4.9.4/dist/Ditto.tar.gz
+DITTO_SDK_URL ?= https://software.ditto.live/cpp-linux-x86_64/Ditto/4.10.0/dist/Ditto.tar.gz
+#DITTO_SDK_URL ?= https://software.ditto.live/cpp-linux-aarch64/Ditto/4.10.0/dist/Ditto.tar.gz
 
 # Location of local Ditto C++ SDK build directory
 SDKBUILD_DIR ?= ~/getditto/ditto/cpp

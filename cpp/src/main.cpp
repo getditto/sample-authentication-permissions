@@ -39,6 +39,10 @@ ditto::LogLevel to_log_level(const std::string &level) {
 
 // OfflinePlayground
 void offline_playground_auth(const std::string &offline_only_license_token) {
+  if (cli_options.app_id.empty()) {
+    throw std::runtime_error("app-id is required");
+  }
+
   ditto::Log::set_minimum_log_level(to_log_level(cli_options.log_level));
   ditto::Log::set_logging_enabled(true);
 
@@ -73,6 +77,13 @@ void offline_playground_auth(const std::string &offline_only_license_token) {
 // OnlinePlayground
 void online_playground_auth(const std::string &token, bool cloud_sync,
                             const std::string &custom_auth_url) {
+  if (cli_options.app_id.empty()) {
+    throw std::runtime_error("app-id is required");
+  }
+  if (token.empty()) {
+    throw std::runtime_error("token is required");
+  }
+
   ditto::Log::set_minimum_log_level(to_log_level(cli_options.log_level));
   ditto::Log::set_logging_enabled(true);
 
@@ -166,6 +177,13 @@ void online_with_authentication_auth(const std::string &provider,
                                      const std::string &password,
                                      bool cloud_sync,
                                      const std::string &custom_auth_url) {
+  if (cli_options.app_id.empty()) {
+    throw std::runtime_error("app-id is required");
+  }
+  if (token.empty() && username.empty()) {
+    throw std::runtime_error("token or username must be provided");
+  }
+
   ditto::Log::set_minimum_log_level(to_log_level(cli_options.log_level));
   ditto::Log::set_logging_enabled(true);
 
@@ -177,7 +195,65 @@ void online_with_authentication_auth(const std::string &provider,
   auto ditto = ditto::Ditto(identity, cli_options.persistence_dir);
   ditto.set_device_name(cli_options.device_name);
   ditto.disable_sync_with_v3();
-  std::cerr << "info: Ditto instance initialized with online-with- identity"
+  std::cerr << "info: Ditto instance initialized with "
+               "online-with-authentication identity"
+            << std::endl;
+
+  ditto.start_sync();
+  std::cerr << "info: sync started" << std::endl;
+
+  // Let Ditto perform syncing activities in the background for a few seconds.
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  std::cerr << "info: stopping sync and cleaning up" << std::endl;
+  ditto.stop_sync();
+}
+
+// SharedKey
+void shared_key_auth(const std::string &shared_key) {
+  if (cli_options.app_id.empty()) {
+    throw std::runtime_error("app-id is required");
+  }
+  if (shared_key.empty()) {
+    throw std::runtime_error("shared-key is required");
+  }
+
+  ditto::Log::set_minimum_log_level(to_log_level(cli_options.log_level));
+  ditto::Log::set_logging_enabled(true);
+
+  auto identity = ditto::Identity::SharedKey(cli_options.app_id, shared_key);
+
+  auto ditto = ditto::Ditto(identity, cli_options.persistence_dir);
+  ditto.set_device_name(cli_options.device_name);
+  ditto.disable_sync_with_v3();
+  std::cerr << "info: Ditto instance initialized with shared-key identity"
+            << std::endl;
+
+  ditto.start_sync();
+  std::cerr << "info: sync started" << std::endl;
+
+  // Let Ditto perform syncing activities in the background for a few seconds.
+  std::this_thread::sleep_for(std::chrono::seconds(5));
+
+  std::cerr << "info: stopping sync and cleaning up" << std::endl;
+  ditto.stop_sync();
+}
+
+// Manual
+void manual_auth(const std::string &certificate_config) {
+  if (certificate_config.empty()) {
+    throw std::runtime_error("certificate-config is required");
+  }
+
+  ditto::Log::set_minimum_log_level(to_log_level(cli_options.log_level));
+  ditto::Log::set_logging_enabled(true);
+
+  auto identity = ditto::Identity::Manual(certificate_config);
+
+  auto ditto = ditto::Ditto(identity, cli_options.persistence_dir);
+  ditto.set_device_name(cli_options.device_name);
+  ditto.disable_sync_with_v3();
+  std::cerr << "info: Ditto instance initialized with manual identity"
             << std::endl;
 
   ditto.start_sync();
@@ -210,7 +286,6 @@ int main(int argc, const char **argv) {
     app.option_defaults()
         ->ignore_case()
         ->ignore_underscore()
-        ->configurable()
         ->always_capture_default();
     app.get_formatter()->column_width(60);
     app.require_subcommand();
@@ -220,93 +295,99 @@ int main(int argc, const char **argv) {
     // These set values of the `cli_options` structure.
 
     app.add_option("-a,--app-id", cli_options.app_id)
-        ->envname("DITTO_APP_ID")
-        ->required();
+        ->envname("DITTOCPPAUTH_APP_ID");
 
     app.add_option("-p,--persistence-directory", cli_options.persistence_dir)
-        ->envname("DITTO_PERSISTENCE_DIR");
+        ->envname("DITTOCPPAUTH_PERSISTENCE_DIR");
 
     app.add_option("-l,--log-level", cli_options.log_level,
                    "error, warning, info, debug, or verbose")
         ->option_text("LEVEL")
-        ->envname("DITTO_LOG_LEVEL");
+        ->envname("DITTOCPPAUTH_LOG_LEVEL");
 
     app.add_option("--export-logs", cli_options.export_logs_path,
                    "Export collected logs to this path")
         ->option_text("PATH")
-        ->envname("DITTO_EXPORT_LOGS_PATH");
+        ->envname("DITTOCPPAUTH_EXPORT_LOGS_PATH");
 
     app.add_option("-n,--device-name", cli_options.device_name, "Device name")
-        ->envname("DITTO_DEVICE_NAME");
+        ->envname("DITTOCPPAUTH_DEVICE_NAME");
 
     // Subcommands
     //
     // Each subcommand gets argument values and then calls one of the xxx_auth()
     // functions above.
 
-    auto offline_playground = app.add_subcommand("offline-playground");
+    // offline-playground
+    auto offline_playground = app.add_subcommand(
+        "offline-playground", "P2P with no cloud connection");
     std::string offline_only_license_token;
     offline_playground
         ->add_option("-t,--offline-only-license-token",
                      offline_only_license_token)
-        ->envname("DITTO_OFFLINE_ONLY_LICENSE_TOKEN");
+        ->envname("DITTOCPPAUTH_OFFLINE_ONLY_LICENSE_TOKEN");
     offline_playground->callback(
         [&] { offline_playground_auth(offline_only_license_token); });
 
-    auto online_playground = app.add_subcommand("online-playground");
+    // online-playground
+    auto online_playground = app.add_subcommand(
+        "online-playground", "Unsecure cloud environment for development");
     std::string online_playground_token;
     online_playground
         ->add_option("-t,--online-playground-token", online_playground_token,
                      "Online playground token")
         ->required()
-        ->envname("DITTO_PLAYGROUND_TOKEN");
+        ->envname("DITTOCPPAUTH_PLAYGROUND_TOKEN");
     bool online_playground_cloud_sync = true;
     online_playground
         ->add_flag("--cloud-sync,!--no-cloud_sync",
                    online_playground_cloud_sync, "Enable Ditto cloud sync")
-        ->envname("DITTO_CLOUD_SYNC");
+        ->envname("DITTOCPPAUTH_CLOUD_SYNC");
     std::string online_playground_custom_auth_url;
     online_playground
         ->add_option("--custom-auth-url", online_playground_custom_auth_url)
-        ->envname("DITTO_CUSTOM_AUTH_URL");
+        ->envname("DITTOCPPAUTH_CUSTOM_AUTH_URL");
     online_playground->callback([&] {
       online_playground_auth(online_playground_token,
                              online_playground_cloud_sync,
                              online_playground_custom_auth_url);
     });
 
-    auto online_with_authentication =
-        app.add_subcommand("online-with-authentication");
+    // online-with-authentication
+    auto online_with_authentication = app.add_subcommand(
+        "online-with-authentication",
+        "Production authentication with Ditto cloud or on-premises server");
     std::string online_with_authentication_provider;
-    online_with_authentication->add_option("--provider",
-                                           online_with_authentication_provider);
+    online_with_authentication
+        ->add_option("--provider", online_with_authentication_provider)
+        ->envname("DITTOCPPAUTH_PROVIDER");
     std::string online_with_authentication_token;
     online_with_authentication
         ->add_option("-t,--online-token", online_with_authentication_token,
                      "Authentication token")
-        ->envname("DITTO_ONLINE_TOKEN");
+        ->envname("DITTOCPPAUTH_ONLINE_TOKEN");
     std::string online_with_authentication_username;
     online_with_authentication
         ->add_option("--username", online_with_authentication_username,
                      "User name")
-        ->envname("DITTO_USERNAME");
+        ->envname("DITTOCPPAUTH_USERNAME");
     std::string online_with_authentication_password;
     online_with_authentication
         ->add_option("--password", online_with_authentication_password,
                      "Password")
-        ->envname("DITTO_PASSWORD");
+        ->envname("DITTOCPPAUTH_PASSWORD");
     bool online_with_authentication_cloud_sync = true;
     online_with_authentication
         ->add_flag("--cloud-sync,!--no-cloud_sync",
                    online_with_authentication_cloud_sync,
                    "Enable Ditto cloud sync")
-        ->envname("DITTO_CLOUD_SYNC");
+        ->envname("DITTOCPPAUTH_CLOUD_SYNC");
     std::string online_with_authentication_custom_auth_url;
     online_with_authentication
         ->add_option("--custom-auth-url",
                      online_with_authentication_custom_auth_url,
                      "Custom authentication URL")
-        ->envname("DITTO_CUSTOM_AUTH_URL");
+        ->envname("DITTOCPPAUTH_CUSTOM_AUTH_URL");
     online_with_authentication->callback([&] {
       online_with_authentication_auth(
           online_with_authentication_provider, online_with_authentication_token,
@@ -315,6 +396,26 @@ int main(int argc, const char **argv) {
           online_with_authentication_cloud_sync,
           online_with_authentication_custom_auth_url);
     });
+
+    // shared-key
+    auto shared_key =
+        app.add_subcommand("shared-key", "Simple shared-secret authentication");
+    std::string shared_key_key;
+    shared_key
+        ->add_option("-k,--key", shared_key_key,
+                     "Base-64 encoded DER private key")
+        ->envname("DITTOCPPAUTH_SHARED_KEY");
+    shared_key->callback([&] { shared_key_auth(shared_key_key); });
+
+    // manual
+    auto manual = app.add_subcommand(
+        "manual", "Accepts base64-encode certificate bundle");
+    std::string certificate_config;
+    manual
+        ->add_option("-c,--certificate-config", certificate_config,
+                     "Base64-encoded certificate bundle")
+        ->envname("DITTOCPPAUTH_CERTIFICATE_CONFIG");
+    manual->callback([&] { manual_auth(certificate_config); });
 
     CLI11_PARSE(app, argc, argv);
 
