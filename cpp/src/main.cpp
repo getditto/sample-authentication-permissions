@@ -281,7 +281,9 @@ void export_logs(const std::string &path) {
 
 int main(int argc, const char **argv) {
   try {
-    CLI::App app("Ditto C++ SDK Authentication Sample", "dittocppauth");
+    CLI::App app("Ditto C++ SDK Authentication Sample\n\nDemonstrates use of "
+                 "authentication modes supported by the Ditto C++ SDK.",
+                 "dittocppauth");
     app.set_help_all_flag("--help-all", "Expand all help");
     app.option_defaults()
         ->ignore_case()
@@ -331,7 +333,7 @@ int main(int argc, const char **argv) {
 
     // online-playground
     auto online_playground = app.add_subcommand(
-        "online-playground", "Unsecure cloud environment for development");
+        "online-playground", "Low-security cloud environment for development");
     std::string online_playground_token;
     online_playground
         ->add_option("-t,--online-playground-token", online_playground_token,
