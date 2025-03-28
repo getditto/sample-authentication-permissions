@@ -37,6 +37,23 @@ ditto::LogLevel to_log_level(const std::string &level) {
                            "'debug', and 'verbose'");
 }
 
+// Evict all contents of the Ditto store.
+//
+// This is called after logging out.
+void evict_all(ditto::Ditto &ditto) noexcept {
+  try {
+    // TODO: reimplement this using DQL instead of the legacy query-builder
+    // functions. `SELECT * from __collections` will return the set of
+    // collections.
+    auto collections = ditto.get_store().collections().exec();
+    for (auto &c : collections) {
+      c.find_all().evict();
+    }
+  } catch (const std::exception &e) {
+    std::cerr << "error: evict_all: " << e.what() << std::endl;
+  }
+}
+
 // OfflinePlayground
 void offline_playground_auth(const std::string &offline_only_license_token) {
   if (cli_options.app_id.empty()) {
@@ -72,6 +89,10 @@ void offline_playground_auth(const std::string &offline_only_license_token) {
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
   std::cerr << "info: cleaning up" << std::endl;
+  if (!offline_only_license_token.empty()) {
+    ditto.stop_sync();
+  }
+  evict_all(ditto);
 }
 
 // OnlinePlayground
@@ -103,8 +124,14 @@ void online_playground_auth(const std::string &token, bool cloud_sync,
   // Let Ditto perform syncing activities in the background for a few seconds.
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  std::cerr << "info: stopping sync and cleaning up" << std::endl;
+  std::cerr << "info: stopping sync" << std::endl;
   ditto.stop_sync();
+
+  std::cerr << "info: logging out" << std::endl;
+  ditto.get_auth()->logout();
+
+  std::cerr << "info: cleaning up" << std::endl;
+  evict_all(ditto);
 }
 
 // Concrete implementation of the abstract `ditto::AuthenticationCallback`
@@ -116,6 +143,36 @@ private:
   std::string username;
   std::string password;
 
+  void login(std::shared_ptr<ditto::Authenticator> authenticator) {
+    if (!token.empty()) {
+      // TODO: For SDK 4.11 and newer, can use new `Ditto::login()` instead
+      authenticator->login_with_token(
+          token, provider, [](std::unique_ptr<ditto::DittoError> error) {
+            if (error) {
+              std::cerr << "error: login_with_token: " << error->what()
+                        << std::endl;
+            } else {
+              std::cerr << "info: login_with_token succeeded" << std::endl;
+            }
+          });
+    } else if (!username.empty()) {
+      authenticator->login_with_credentials(
+          username, password, provider,
+          [](std::unique_ptr<ditto::DittoError> error) {
+            if (error) {
+              std::cerr << "error: login_with_credentials: " << error->what()
+                        << std::endl;
+            } else {
+              std::cerr << "info: login_with_credentials succeeded"
+                        << error->what() << std::endl;
+            }
+          });
+    } else {
+      std::cerr << "error: neither token nor username is specified for login"
+                << std::endl;
+    }
+  }
+
 public:
   AuthCallback(std::string token, std::string provider, std::string username,
                std::string password)
@@ -123,28 +180,10 @@ public:
         username(std::move(username)), password(std::move(password)) {}
 
   void authentication_required(
-      std::shared_ptr<ditto::Authenticator> authenticator) override {
+      std::shared_ptr<ditto::Authenticator> authenticator) noexcept override {
     try {
-      std::cerr << "info: authentication_required callback" << std::endl;
-      if (!token.empty()) {
-        // TODO: For SDK 4.11 and newer, can use `login()` instead
-        authenticator->login_with_token(
-            token, provider, [](std::unique_ptr<ditto::DittoError> error) {
-              if (error) {
-                std::cerr << "error: login_with_token: " << error->what()
-                          << std::endl;
-              }
-            });
-      } else if (!username.empty()) {
-        authenticator->login_with_credentials(
-            username, password, provider,
-            [](std::unique_ptr<ditto::DittoError> error) {
-              if (error) {
-                std::cerr << "error: login_with_credentials: " << error->what()
-                          << std::endl;
-              }
-            });
-      }
+      std::cerr << "info: authentication_required" << std::endl;
+      login(authenticator);
     } catch (const std::exception &e) {
       std::cerr << "error: authentication_required: " << e.what() << std::endl;
     }
@@ -152,12 +191,19 @@ public:
 
   void authentication_expiring_soon(
       std::shared_ptr<ditto::Authenticator> authenticator,
-      std::int64_t seconds_remaining) override {
-    std::cerr << "info: authentication_expiring_soon callback" << std::endl;
+      std::int64_t seconds_remaining) noexcept override {
+    try {
+      std::cerr << "info: authentication_expiring_soon; seconds_remaining="
+                << seconds_remaining << std::endl;
+      login(authenticator);
+    } catch (const std::exception &e) {
+      std::cerr << "error: authentication_expiring_soon: " << e.what()
+                << std::endl;
+    }
   }
 
   void authentication_status_did_change(
-      std::shared_ptr<ditto::Authenticator> authenticator) override {
+      std::shared_ptr<ditto::Authenticator> authenticator) noexcept override {
     try {
       auto status = authenticator->get_status();
       std::cerr << "info: authentication_status_did_change; is_authenticated="
@@ -205,8 +251,14 @@ void online_with_authentication_auth(const std::string &provider,
   // Let Ditto perform syncing activities in the background for a few seconds.
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  std::cerr << "info: stopping sync and cleaning up" << std::endl;
+  std::cerr << "info: stopping sync" << std::endl;
   ditto.stop_sync();
+
+  std::cerr << "info: logging out" << std::endl;
+  ditto.get_auth()->logout();
+
+  std::cerr << "info: cleaning up" << std::endl;
+  evict_all(ditto);
 }
 
 // SharedKey
@@ -235,8 +287,14 @@ void shared_key_auth(const std::string &shared_key) {
   // Let Ditto perform syncing activities in the background for a few seconds.
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  std::cerr << "info: stopping sync and cleaning up" << std::endl;
+  std::cerr << "info: stopping sync" << std::endl;
   ditto.stop_sync();
+
+  std::cerr << "info: logging out" << std::endl;
+  ditto.get_auth()->logout();
+
+  std::cerr << "info: cleaning up" << std::endl;
+  evict_all(ditto);
 }
 
 // Manual
@@ -262,11 +320,17 @@ void manual_auth(const std::string &certificate_config) {
   // Let Ditto perform syncing activities in the background for a few seconds.
   std::this_thread::sleep_for(std::chrono::seconds(5));
 
-  std::cerr << "info: stopping sync and cleaning up" << std::endl;
+  std::cerr << "info: stopping sync" << std::endl;
   ditto.stop_sync();
+
+  std::cerr << "info: logging out" << std::endl;
+  ditto.get_auth()->logout();
+
+  std::cerr << "info: cleaning up" << std::endl;
+  evict_all(ditto);
 }
 
-void export_logs(const std::string &path) {
+void export_logs(const std::string &path) noexcept {
   try {
     if (std::filesystem::exists(path)) {
       std::filesystem::remove(path);
@@ -362,7 +426,8 @@ int main(int argc, const char **argv) {
     std::string online_with_authentication_provider;
     online_with_authentication
         ->add_option("--provider", online_with_authentication_provider)
-        ->envname("DITTOCPPAUTH_PROVIDER");
+        ->envname("DITTOCPPAUTH_PROVIDER")
+        ->required();
     std::string online_with_authentication_token;
     online_with_authentication
         ->add_option("-t,--online-token", online_with_authentication_token,
@@ -418,6 +483,12 @@ int main(int argc, const char **argv) {
                      "Base64-encoded certificate bundle")
         ->envname("DITTOCPPAUTH_CERTIFICATE_CONFIG");
     manual->callback([&] { manual_auth(certificate_config); });
+
+    // print-sdk-version
+    app.add_subcommand("print-sdk-version",
+                       "Print the Ditto C++ SDK version string")
+        ->callback(
+            [] { std::cout << ditto::Ditto::get_sdk_version() << std::endl; });
 
     CLI11_PARSE(app, argc, argv);
 

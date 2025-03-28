@@ -4,7 +4,11 @@ This is a simple command-line-interface application that demonstrates how to
 implement various authentication schemes using the Ditto C++ SDK.
 
 For more information about Ditto's authentication and authorization mechanisms,
-see <https://docs.ditto.live/key-concepts/authentication-and-authorization>.
+refer to the documentation:
+
+- <https://docs.ditto.live/key-concepts/authentication-and-authorization>
+- <https://docs.ditto.live/sdk/latest/auth-and-authorization/cloud-authentication>
+
 
 ## Usage
 
@@ -32,7 +36,7 @@ OPTIONS:
 
 
 online-playground
-  Unsecure cloud environment for development
+  Low-security cloud environment for development
 
 
 OPTIONS:
@@ -77,6 +81,10 @@ manual
 OPTIONS:
   -c,               --certificate-config TEXT (Env:DITTOCPPAUTH_CERTIFICATE_CONFIG)
                                                             Base64-encoded certificate bundle
+
+
+print-sdk-version
+  Print the Ditto C++ SDK version string
 ```
 
 ### Environment Variables
