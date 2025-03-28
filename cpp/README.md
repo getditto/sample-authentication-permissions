@@ -45,6 +45,8 @@ OPTIONS:
                     --cloud-sync, --no-cloud_sync{false} (Env:DITTOCPPAUTH_CLOUD_SYNC)
                                                             Enable Ditto cloud sync
                     --custom-auth-url TEXT (Env:DITTOCPPAUTH_CUSTOM_AUTH_URL)
+                    --websocket-url TEXT (Env:DITTOCPPAUTH_WEBSOCKET_URL)
+                                                            WebSocket URL
 
 
 online-with-authentication
@@ -52,7 +54,7 @@ online-with-authentication
 
 
 OPTIONS:
-                    --provider TEXT (Env:DITTOCPPAUTH_PROVIDER)
+                    --provider TEXT REQUIRED (Env:DITTOCPPAUTH_PROVIDER)
   -t,               --online-token TEXT (Env:DITTOCPPAUTH_ONLINE_TOKEN)
                                                             Authentication token
                     --username TEXT (Env:DITTOCPPAUTH_USERNAME)
@@ -108,6 +110,7 @@ Most command-line options can alternatively be specified by setting environment 
 | `--persistence-directory`     | `DITTOCPPAUTH_PERSISTENCE_DIR`            |
 | `--provider`                  | `DITTOCPPAUTH_PROVIDER`                   |
 | `--username`                  | `DITTOCPPAUTH_USERNAME`                   |
+| `--websocket-url`             | `DITTOCPPAUTH_WEBSOCKET_URL`              |
 
 ### Usage Examples
 

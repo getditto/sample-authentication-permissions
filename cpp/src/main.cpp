@@ -97,7 +97,8 @@ void offline_playground_auth(const std::string &offline_only_license_token) {
 
 // OnlinePlayground
 void online_playground_auth(const std::string &token, bool cloud_sync,
-                            const std::string &custom_auth_url) {
+                            const std::string &custom_auth_url,
+                            const std::string &websocket_url) {
   if (cli_options.app_id.empty()) {
     throw std::runtime_error("app-id is required");
   }
@@ -112,6 +113,13 @@ void online_playground_auth(const std::string &token, bool cloud_sync,
       cli_options.app_id, token, cloud_sync, custom_auth_url);
 
   auto ditto = ditto::Ditto(identity, cli_options.persistence_dir);
+
+  if (!websocket_url.empty()) {
+    ditto.update_transport_config(
+        [&websocket_url](ditto::TransportConfig &config) {
+          config.connect.websocket_urls.insert(websocket_url);
+        });
+  }
   ditto.set_device_name(cli_options.device_name);
   ditto.disable_sync_with_v3();
   std::cerr
@@ -413,10 +421,15 @@ int main(int argc, const char **argv) {
     online_playground
         ->add_option("--custom-auth-url", online_playground_custom_auth_url)
         ->envname("DITTOCPPAUTH_CUSTOM_AUTH_URL");
+    std::string online_playground_websocket_url;
+    online_playground
+        ->add_option("--websocket-url", online_playground_websocket_url,
+                     "WebSocket URL")
+        ->envname("DITTOCPPAUTH_WEBSOCKET_URL");
     online_playground->callback([&] {
-      online_playground_auth(online_playground_token,
-                             online_playground_cloud_sync,
-                             online_playground_custom_auth_url);
+      online_playground_auth(
+          online_playground_token, online_playground_cloud_sync,
+          online_playground_custom_auth_url, online_playground_websocket_url);
     });
 
     // online-with-authentication
