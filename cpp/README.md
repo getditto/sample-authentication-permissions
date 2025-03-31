@@ -96,7 +96,7 @@ Most command-line options can alternatively be specified by setting environment 
 | Option                        | Environment variable                      |
 | ----------------------------- | ----------------------------------------- |
 | `--app-id`                    | `DITTOCPPAUTH_APP_ID`                     |
-| `--certificate-config         | `DITTOCPPAUTH_CERTIFICATE_CONFIG`         |
+| `--certificate-config`        | `DITTOCPPAUTH_CERTIFICATE_CONFIG`         |
 | `--cloud-sync`                | `DITTOCPPAUTH_CLOUD_SYNC`                 |
 | `--custom-auth-url`           | `DITTOCPPAUTH_CUSTOM_AUTH_URL`            |
 | `--device-name`               | `DITTOCPPAUTH_DEVICE_NAME`                |
