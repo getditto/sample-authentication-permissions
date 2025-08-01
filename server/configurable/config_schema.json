@@ -1,0 +1,113 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "title": "Ditto Generic Authentication Webhook Config Schema",
+    "description": "JSON configuration for the generic authentication webhook.",
+    "type": "object",
+    "required": [
+        "permissions"
+    ],
+    "properties": {
+        "JWTSecret": {
+            "description": "The secret used to verify the JWT signature. If not provided, JWT signature verification is skipped.",
+            "type": "string"
+        },
+        "userIDField": {
+            "description": "The JWT field containing the user ID. In the form 'path.to.userID'.",
+            "type": "string",
+            "default": "sub"
+        },
+        "defaultExpirationSeconds": {
+            "description": "Default session expiration in seconds if JWT has no exp field.",
+            "type": "integer",
+            "minimum": 0,
+            "default": 3600
+        },
+        "permissions": {
+            "description": "Permission mappings. Keys are in the form 'path.to.claim.claimValue'.",
+            "type": "object",
+            "patternProperties": {
+                "^.+\\..+$": {
+                    "$ref": "#/definitions/PermissionSet"
+                }
+            },
+            "additionalProperties": false
+        },
+        "clientInfo": {
+            "description": "Optional arbitrary JSON data to be passed through to the client. Can be an object or an array of paths to extract from JWT (e.g., 'user.metadata')",
+            "oneOf": [
+                {
+                    "type": "object"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            ]
+        },
+        "identityServiceMetadata": {
+            "description": "Optional metadata to be signed and shared between peers. Can be an object or an array of paths to extract from JWT. Amount of data should be kept small for performance.",
+            "oneOf": [
+                {
+                    "type": "object"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            ]
+        }
+    },
+    "definitions": {
+        "PermissionSet": {
+            "type": "object",
+            "required": [
+                "read",
+                "write"
+            ],
+            "properties": {
+                "read": {
+                    "description": "Read permissions: '*' for everything, or object mapping collections to queries",
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "const": "*"
+                        },
+                        {
+                            "$ref": "#/definitions/CollectionQueries"
+                        }
+                    ]
+                },
+                "write": {
+                    "description": "Write permissions: '*' for everything, or object mapping collections to queries",
+                    "oneOf": [
+                        {
+                            "type": "string",
+                            "const": "*"
+                        },
+                        {
+                            "$ref": "#/definitions/CollectionQueries"
+                        }
+                    ]
+                },
+                "remoteQuery": {
+                    "description": "Enable remote queries (requires full read permission). Defaults to false.",
+                    "type": "boolean",
+                    "default": false
+                }
+            }
+        },
+        "CollectionQueries": {
+            "type": "object",
+            "additionalProperties": {
+                "type": "array",
+                "items": {
+                    "type": "string"
+                }
+            }
+        }
+    }
+}

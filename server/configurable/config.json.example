@@ -1,0 +1,24 @@
+{
+    "$schema": "./config_schema.json",
+    "userIDField": "sub",
+    "defaultExpirationSeconds": 3600,
+    "JWTSecret": "a-string-secret-at-least-256-bits-long",
+    "permissions": {
+        "user_role.admin": {
+            "read": "*",
+            "write": "*"
+        },
+        "user_role.user2": {
+            "read": "*",
+            "write": {
+                "tasks": ["_id == '688ce8da00e7f318004e3cf9'"]
+            }
+        },
+        "user_role.user3": {
+            "read": {
+                "tasks": ["_id == '688ce8e000062161004e3cfa'"]
+            },
+            "write": {}
+        }
+    }
+}
