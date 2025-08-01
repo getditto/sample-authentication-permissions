@@ -1,4 +1,4 @@
-// Ditto generic auth webhook implementation
+// Ditto configurable auth webhook implementation
 
 const express = require('express');
 const cors = require('cors');

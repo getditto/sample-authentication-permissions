@@ -36,11 +36,26 @@ PORT=4000 node server.js
 
 A schema for the configuration is provided as well as an example.
 
-### Core Settings
+### Fields
 
 - **`userIDField`** (string, default: "sub"): JWT field to extract user ID from
 - **`defaultExpirationSeconds`** (number, default: 3600): Default token expiration in seconds, to be used if no exp field is provided in the JWT
-- **`JWTSecret`** (string, optional): Secret for JWT signature verification
+- **`JWTSecret`** (string, optional): Secret for JWT signature verification see [JWT Processing](#jwt-processing) for details
+- **`clientInfo`** (object | array, optional): Static object or JWT path for client metadata, this data is copied into the response
+- **`identityServiceMetadata`** (object | array, optional): Static object or JWT path for identity service data, this data is copied into the response
+- **`permissions`** (object, required): Maps JWT claims to Ditto permissions. See [Permission Mapping](#permission-mapping) for details.
+
+## JWT Processing
+
+### Without Signature Verification
+If no `JWTSecret` is provided, tokens are decoded without verification (useful for development).
+
+### With Signature Verification
+When `JWTSecret` is configured, JWT signatures are validated before processing.
+
+### Expiration Handling
+- Uses JWT `exp` field if present the `expirationSeconds` field of the response will be the number of seconds between the `exp` time stamp and the current time. If no `exp` field is present in the JWT the `defaultExpirationSeconds` specified in the config will be used
+- Expired tokens return 401 error
 
 ### Permission Mapping
 
@@ -61,21 +76,3 @@ Permissions use the format `path.to.claim.value` where:
 - `"*"` grants full access
 - Object format grants collection-specific access with a permission query on the `_id` field of a document. For more information see [Authorizing Users](https://docs.ditto.live/sdk/latest/auth-and-authorization/data-authorization)
 - JWTs containing multiple claims with different permissions have these merged so users receive the highest level of permissions of all the present claims.
-
-### Optional Fields
-
-- **`clientInfo`**: Static object or JWT path for client metadata, this data is copied into the response
-- **`identityServiceMetadata`**: Static object or JWT path for identity service data, this data is copied into the response
-
-## JWT Processing
-
-### Without Signature Verification
-If no `JWTSecret` is provided, tokens are decoded without verification (useful for development).
-
-### With Signature Verification
-When `JWTSecret` is configured, JWT signatures are validated before processing.
-
-### Expiration Handling
-- Uses JWT `exp` field if present the `expirationSeconds` field of the response will be the number of seconds between the `exp` time stamp and the current time. If no `exp` field is present in the JWT the `defaultExpirationSeconds` specified in the config will be used
-- Expired tokens return 401 error
-
