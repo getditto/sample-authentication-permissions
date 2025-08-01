@@ -48,8 +48,6 @@ Permissions use the format `path.to.claim.value` where:
 - `path.to.claim` is the dot-notation path to the JWT field
 - `value` is the expected value that grants the permission
 
-**If no permissions are specified in the `config.json` file all requests will be given complete read and write access.**
-
 #### Permission Objects
 
 ```json
