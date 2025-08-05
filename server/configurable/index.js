@@ -10,96 +10,39 @@ class AuthWebhook {
     constructor() {
         this.app = express();
         this.app.use(cors());
-        this.permissionsMap = {};
-
-        this.setupMiddleware();
-        this.loadConfig();
-        this.setupRoutes();
-    }
-
-    /**
-     * Sets up the middleware for the Express app, including logging.
-     */
-    setupMiddleware() {
         this.app.use(bodyParser.json());
-        this.app.use(cors());
+        this.permissionsMap = {};
 
         // Logging middleware
         this.app.use((req, _, next) => {
             console.log(`${req.method} ${req.url}`);
             next();
         });
+
+        this.loadConfig();
+        this.setupEndpoints();
     }
 
     /**
-     * Loads the configuration from config.json and validates it.
+     * Loads the configuration from config.json.
      */
     loadConfig() {
-        try {
-            this.config = require('./config.json');
-            this.buildClaimsMap();
-        } catch (error) {
-            console.error('Error loading config.json:', error.message);
-            process.exit(1);
+        this.config = require('./config.json');
+        // Set default values if not present
+        this.config.userIDField = this.config.userIDField || 'sub';
+        this.config.defaultExpirationSeconds = this.config.defaultExpirationSeconds || 3600;
+
+        // Check for required fields
+        if (!this.config.roles) {
+            throw new Error('The "roles" field is required in the config.');
         }
+        this.buildClaimsMap();
     }
 
     /**
-     * Decodes a JWT
+     * Sets up the endpoints for the Auth Webhook.
      */
-    decodeJWT(token) {
-        let decoded;
-        // If JWTSecret is provided, verify the signature
-        if (this.config.JWTSecret) {
-            try {
-                // Verify and decode the token
-                decoded = jwt.verify(token, this.config.JWTSecret);
-            } catch (error) {
-                const authError = new Error('Invalid token signature');
-                authError.status = 401;
-                throw authError;
-            }
-        } else {
-            // No secret provided, just decode without verification
-            try {
-                decoded = jwtDecode(token);
-            } catch (error) {
-                const authError = new Error('Invalid token format');
-                authError.status = 401;
-                throw authError;
-            }
-        }
-        return decoded;
-    }
-
-    /**
-     * Builds the permissions map from the configuration.
-     */
-    buildClaimsMap() {
-        this.permissionsMap = {};
-
-        Object.entries(this.config.permissions).forEach(([key, permission]) => {
-            // Split key to get claim path and value
-            const lastDotIndex = key.lastIndexOf('.');
-            const claimPath = key.substring(0, lastDotIndex);
-            const claimValue = key.substring(lastDotIndex + 1);
-
-            if (!this.permissionsMap[claimPath]) {
-                this.permissionsMap[claimPath] = {};
-            }
-
-            this.permissionsMap[claimPath][claimValue] = {
-                read: permission.read,
-                write: permission.write,
-                remoteQuery: permission.remoteQuery || false
-            };
-        });
-    }
-
-    /**
-     * Set up the routes for the Express app.
-     */
-    setupRoutes() {
+    setupEndpoints() {
         // Health check endpoint
         this.app.get('/', (_, res) => {
             res.json({
@@ -125,55 +68,97 @@ class AuthWebhook {
     }
 
     /**
+     * Decodes a JWT
+     */
+    decodeJWT(token) {
+        try {
+            if (this.config.JWTSecret) {
+                return jwt.verify(token, this.config.JWTSecret);
+            }
+            return jwtDecode(token);
+        } catch (error) {
+            throw Object.assign(new Error('Invalid token'), { status: 401 });
+        }
+    }
+
+    /**
+     * Builds the permissions map from the configuration.
+     * This structure maps a user ID to their permissions based on the roles they belong to.
+     */
+    buildClaimsMap() {
+        this.permissionsMap = {};
+
+        // Go through each role in the permissions config
+        Object.entries(this.config.roles).forEach(([_, { members, permissions }]) => {
+            // Go through each user in the role
+            const readPermissions = this.convertPermissionFormat(permissions.read);
+            const writePermissions = this.convertPermissionFormat(permissions.write);
+            const remoteQuery = permissions.remoteQuery;
+
+            members.forEach(user => {
+                // For each member merge their permissions
+                const existingPerms = this.permissionsMap[user] || { read: { everything: false, queriesByCollection: {} }, write: { everything: false, queriesByCollection: {} } };
+                this.permissionsMap[user] = {
+                    read: this.mergePermissions(existingPerms.read, readPermissions),
+                    write: this.mergePermissions(existingPerms.write, writePermissions),
+                    remoteQuery
+                };
+            });
+        });
+    }
+
+    /**
      * Creates the payload for the response based on the decoded JWT.
      * @param {Object} decoded - The decoded JWT payload.
      * @returns {Object} - The payload to be returned in the response.
      */
     createPayload(decoded) {
-        const userIDField = this.config.userIDField || 'sub';
-        const defaultExpirationSeconds = this.config.defaultExpirationSeconds || 3600;
+        const userIDField = this.config.userIDField;
+        const userID = this.getNestedValue(decoded, userIDField);
+        const permissions = this.permissionsMap[userID]
 
-        const payload = {
+        if (!permissions) {
+            return { authenticated: false };
+        }
+
+        const response = {
             authenticated: true,
-            userID: this.getNestedValue(decoded, userIDField) || decoded.sub,
-            expirationSeconds: this.calculateExpiration(decoded, defaultExpirationSeconds),
-            permissions: this.extractPermissions(decoded)
+            userID,
+            expirationSeconds: this.calculateExpiration(decoded),
+            permissions
         };
 
-        // Add clientInfo if configured
-        if (this.config.clientInfo) {
-            // If the clientInfo is an array its assumed to be a list of paths to extract from the JWT
-            if (Array.isArray(this.config.clientInfo)) {
-                // This just gets them all and merges them into a single object
-                payload.clientInfo = {};
-                this.config.clientInfo.forEach(path => {
-                    const value = this.getNestedValue(decoded, path);
-                    if (value !== undefined) {
-                        payload.clientInfo = { ...payload.clientInfo, ...value };
-                    }
-                });
+        // Add optional fields
+        ['clientInfo', 'identityServiceMetadata'].forEach(field => {
+            if (this.config[field]) {
+                response[field] = this.extractConfigField(decoded, field);
             }
-        } else {
-            // Use static object from config
-            payload.clientInfo = this.config.clientInfo;
+        });
+
+        return response;
+    }
+
+    /**
+     * Extracts a field from the config based on the decoded JWT.
+     * @param {Object} decoded - The decoded JWT payload.
+     * @param {string} fieldName - The name of the field to extract.
+     * @returns {Object} - The extracted field value.
+     */
+    extractConfigField(decoded, fieldName) {
+        let config = this.config[fieldName] || {};
+        let userConfig = {};
+
+        if (Array.isArray(config)) {
+            for (const path of config) {
+                // Result is we want the final key value pair to be added to the config
+                const value = this.getNestedValue(decoded, path);
+                const finalKey = path.split('.').pop();
+                userConfig[finalKey] = value;
+            }
+            return userConfig;
         }
 
-        // Repeat for identityServiceMetadata
-        if (this.config.identityServiceMetadata) {
-            if (Array.isArray(this.config.identityServiceMetadata)) {
-                payload.identityServiceMetadata = {};
-                this.config.identityServiceMetadata.forEach(path => {
-                    const value = this.getNestedValue(decoded, path);
-                    if (value !== undefined) {
-                        payload.identityServiceMetadata = { ...payload.identityServiceMetadata, ...value };
-                    }
-                });
-            } else {
-                payload.identityServiceMetadata = this.config.identityServiceMetadata;
-            }
-        }
-
-        return payload;
+        return config;
     }
 
     /**
@@ -192,11 +177,9 @@ class AuthWebhook {
 
         let decoded = this.decodeJWT(token);
 
-        /// Check if the token has expired
+        // Check if the token has expired
         if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
-            const error = new Error('Token has expired');
-            error.status = 401;
-            throw error;
+            throw Object.assign(new Error('Token has expired'), { status: 401 });
         }
 
         const payload = this.createPayload(decoded);
@@ -210,76 +193,9 @@ class AuthWebhook {
      * @param {number} defaultExpiration - The default expiration time in seconds.
      * @returns {number} - The time until expiration in seconds.
      */
-    calculateExpiration(decoded, defaultExpiration) {
-        // exp is a reserved claim in JWT that indicates the expiration time but may not always be present
-        if (!decoded.exp) {
-            return defaultExpiration;
-        }
-
-        const currentTime = Math.floor(Date.now() / 1000);
-        const timeUntilExpiration = decoded.exp - currentTime;
-
-        // If token is already expired, return 0
-        return Math.max(0, timeUntilExpiration);
-    }
-
-    /**
-     * Extracts permissions from the decoded JWT based on the claims map.
-     * @param {Object} decoded - The decoded JWT payload.
-     * @returns {Object} - The permissions object.
-     */
-    extractPermissions(decoded) {
-        const permissions = {
-            read: {},
-            write: {},
-            remoteQuery: false
-        };
-
-        // If the permissions map is empty, return access to everything
-        if (Object.keys(this.permissionsMap).length === 0) {
-            return {
-                read: { everything: true, queriesByCollection: {} },
-                write: { everything: true, queriesByCollection: {} },
-                remoteQuery: true
-            };
-        }
-
-        // Process all matching claims and merge permissions
-        for (const claimPath of Object.keys(this.permissionsMap)) {
-            // Get the value from the JWT using the claim path
-            const claimValue = this.getNestedValue(decoded, claimPath);
-
-            if (claimValue !== undefined && this.permissionsMap[claimPath] && this.permissionsMap[claimPath][claimValue]) {
-                const claimPermissions = this.permissionsMap[claimPath][claimValue];
-
-                // Convert simplified format to Ditto's expected format
-                const readPerms = this.convertPermissionFormat(claimPermissions.read);
-                const writePerms = this.convertPermissionFormat(claimPermissions.write);
-
-                // Merge permissions
-                permissions.read = this.mergePermissions(permissions.read, readPerms);
-                permissions.write = this.mergePermissions(permissions.write, writePerms);
-
-                // Enable remoteQuery if any claim allows it
-                permissions.remoteQuery = permissions.remoteQuery || claimPermissions.remoteQuery || false;
-            }
-        }
-
-        // If either permissions are empty, set defaults
-        if (Object.keys(permissions.read).length === 0) {
-            permissions.read = {
-                everything: false,
-                queriesByCollection: {}
-            };
-        }
-        if (Object.keys(permissions.write).length === 0) {
-            permissions.write = {
-                everything: false,
-                queriesByCollection: {}
-            };
-        }
-
-        return permissions;
+    calculateExpiration(decoded) {
+        if (!decoded.exp) return this.config.defaultExpirationSeconds;
+        return Math.max(0, decoded.exp - Math.floor(Date.now() / 1000));
     }
 
     /**
@@ -305,7 +221,7 @@ class AuthWebhook {
         };
 
         // Add new collection queries
-        Object.entries(newPerms.queriesByCollection || {}).forEach(([collection, queries]) => {
+        Object.entries(newPerms.queriesByCollection).forEach(([collection, queries]) => {
             if (!merged.queriesByCollection[collection]) {
                 merged.queriesByCollection[collection] = [];
             }
@@ -326,60 +242,43 @@ class AuthWebhook {
      * @returns {*} - The value at the path or undefined
      */
     getNestedValue(obj, path) {
-        const keys = path.split('.');
-        let current = obj;
-
-        for (const key of keys) {
-            if (current && typeof current === 'object' && key in current) {
-                current = current[key];
-            } else {
-                return undefined;
-            }
-        }
-
-        return current;
+        return path.split('.').reduce((current, key) =>
+            current && typeof current === 'object' ? current[key] : undefined, obj
+        );
     }
 
     /**
-     * Converts simplified permission format to Ditto's expected format.
+     * Converts permission format to Ditto's expected format.
      * @param {string|Object} permission - Either '*' or collection queries object
      * @returns {Object} - Ditto permission format
      */
     convertPermissionFormat(permission) {
-        if (permission === '*') {
-            return {
-                everything: true,
-                queriesByCollection: {}
-            };
-        } else {
-            return {
+        return permission === '*'
+            ? { everything: true, queriesByCollection: {} }
+            : {
                 everything: false,
                 queriesByCollection: permission || {}
-            };
-        }
+            }
     }
 
     /**
      * Starts the Express server.
      * @param {number} port - The port to listen on.
      */
-    start(port =  process.env.PORT || 3000) {
+    start(port = process.env.PORT || 3000) {
         this.app.listen(port, () => {
             console.log(`Auth Webhook server running on port ${port}`);
         });
     }
 }
 
-// Create and start the server
-const authWebhook = new AuthWebhook();
-
-// Export both the app and the class for flexibility
+// Export the class for flexibility
 module.exports = {
-    app: authWebhook.app,
     AuthWebhook
 };
 
-// If this file is run directly, start the server
+// If this file is run directly, create and start the server
 if (require.main === module) {
+    const authWebhook = new AuthWebhook();
     authWebhook.start();
 }

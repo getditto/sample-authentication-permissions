@@ -1,6 +1,6 @@
 # Configurable Authentication Server
 
-A configurable authentication server. It translates JWTs into Ditto authentication responses using a JSON configuration file that describes the structure of the JWT and the permissions claims should map to.
+A configurable authentication server. It allows you to define user roles and permissions in a JSON configuration file, which the server uses to authenticate users and provide them with the appropriate permissions.
 
 ## Quick Start
 
@@ -34,45 +34,24 @@ PORT=4000 node server.js
 
 ## Configuration Reference
 
-A schema for the configuration is provided as well as an example.
-
 ### Fields
 
-- **`userIDField`** (string, default: "sub"): JWT field to extract user ID from
-- **`defaultExpirationSeconds`** (number, default: 3600): Default token expiration in seconds, to be used if no exp field is provided in the JWT
-- **`JWTSecret`** (string, optional): Secret for JWT signature verification see [JWT Processing](#jwt-processing) for details
-- **`clientInfo`** (object | array, optional): Static object or JWT path for client metadata, this data is copied into the response
-- **`identityServiceMetadata`** (object | array, optional): Static object or JWT path for identity service data, this data is copied into the response
-- **`permissions`** (object, required): Maps JWT claims to Ditto permissions. See [Permission Mapping](#permission-mapping) for details.
+- **`JWTSecret`** (string, optional): The secret used to sign the JWTs used by the server to verify the JWT, if none is provided no verification is performed.
+- **`userIDField`** (string, optional): The field in the JWT that contains the user ID in the form `path.to.userID`, if none is provided the `sub` field in the JWT is used.
+- **`defaultExpirationSeconds`** (int, optional): The default expiration time for the JWT in seconds, will be used if no `exp` field is present in the JWT.
+- **`clientInfo`** (object | array, optional): Information to be passed through to the response. Can be a single JSON object which will be passed through as-is, or an array of paths to fields in the JWT that should be included in the response.
+- **`identityServiceMetadata`** (object | array, optional): Metadata about the identity service. Can be a single JSON object which will be passed through as-is, or an array of paths to fields in the JWT that should be included in the response.
+- **`roles`** (object): A mapping of roles to permissions. Each role contains an array of userIDs and an object representing the permissions for that role.
+  Permissions example:
+  ```json
+  {
+      "read": "*", # Users can read all resources
+      "write": {
+        "collection1": ["_id == '12345'"] # Users can write to collection1 where the _id is '12345'
+      },
+      "remoteQuery": false
+  }
+  ```
+  For more information on permissions see the [Authorizing Users](https://docs.ditto.live/sdk/latest/auth-and-authorization/data-authorization) section in the docs.
 
-## JWT Processing
-
-### Without Signature Verification
-If no `JWTSecret` is provided, tokens are decoded without verification (useful for development).
-
-### With Signature Verification
-When `JWTSecret` is configured, JWT signatures are validated before processing.
-
-### Expiration Handling
-- Uses JWT `exp` field if present the `expirationSeconds` field of the response will be the number of seconds between the `exp` time stamp and the current time. If no `exp` field is present in the JWT the `defaultExpirationSeconds` specified in the config will be used
-- Expired tokens return 401 error
-
-### Permission Mapping
-
-Permissions use the format `path.to.claim.value` where:
-- `path.to.claim` is the dot-notation path to the JWT field
-- `value` is the expected value that grants the permission
-
-#### Permission Objects
-
-```json
-{
-  "read": "*" | { "collectionName": ["query1", "query2"] },
-  "write": "*" | { "collectionName": ["query1"] },
-  "remoteQuery": true | false
-}
-```
-
-- `"*"` grants full access
-- Object format grants collection-specific access with a permission query on the `_id` field of a document. For more information see [Authorizing Users](https://docs.ditto.live/sdk/latest/auth-and-authorization/data-authorization)
-- JWTs containing multiple claims with different permissions have these merged so users receive the highest level of permissions of all the present claims.
+More details on the configuration schema can be found in `config_schema.json` and an example configuration is provided in `config.json.example`.

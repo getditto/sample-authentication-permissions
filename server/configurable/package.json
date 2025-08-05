@@ -5,10 +5,10 @@
   "license": "ISC",
   "author": "",
   "type": "commonjs",
-  "main": "server.js",
+  "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "test": "jest",
+    "start": "node index.js"
   },
   "dependencies": {
     "body-parser": "^2.2.0",
@@ -16,5 +16,8 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0"
+  },
+  "devDependencies": {
+    "jest": "^30.0.5"
   }
 }

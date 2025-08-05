@@ -3,22 +3,35 @@
     "userIDField": "sub",
     "defaultExpirationSeconds": 3600,
     "JWTSecret": "a-string-secret-at-least-256-bits-long",
-    "permissions": {
-        "user_role.admin": {
-            "read": "*",
-            "write": "*"
-        },
-        "user_role.user2": {
-            "read": "*",
-            "write": {
-                "tasks": ["_id == '688ce8da00e7f318004e3cf9'"]
+    "clientInfo": {
+        "info": "This is some client info"
+    },
+    "identityServiceMetadata": {
+        "metadata": "This is some identity service metadata"
+    },
+    "roles": {
+        "cabin_crew": {
+            "members": [
+                "User1",
+                "User2"
+            ],
+            "permissions": {
+                "read": {
+                    "collection1": ["true"]
+                },
+                "write": {
+                    "collection1": ["_id == '12345'"]
+                }
             }
         },
-        "user_role.user3": {
-            "read": {
-                "tasks": ["_id == '688ce8e000062161004e3cfa'"]
-            },
-            "write": {}
+        "admin": {
+            "members": [
+                "AdminUser"
+            ],
+            "permissions": {
+                "read": "*",
+                "write": "*"
+            }
         }
     }
 }

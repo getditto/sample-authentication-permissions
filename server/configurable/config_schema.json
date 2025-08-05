@@ -4,7 +4,7 @@
     "description": "JSON configuration for the generic authentication webhook.",
     "type": "object",
     "required": [
-        "permissions"
+        "roles"
     ],
     "properties": {
         "JWTSecret": {
@@ -22,15 +22,12 @@
             "minimum": 0,
             "default": 3600
         },
-        "permissions": {
-            "description": "Permission mappings. Keys are in the form 'path.to.claim.claimValue'.",
+        "roles": {
+            "description": "Map of user roles to their members. Key is the name of the role, value is an array of user IDs.",
             "type": "object",
-            "patternProperties": {
-                "^.+\\..+$": {
-                    "$ref": "#/definitions/PermissionSet"
-                }
-            },
-            "additionalProperties": false
+            "additionalProperties": {
+                "$ref": "#/definitions/Group"
+            }
         },
         "clientInfo": {
             "description": "Optional arbitrary JSON data to be passed through to the client. Can be an object or an array of paths to extract from JWT (e.g., 'user.metadata')",
@@ -62,6 +59,27 @@
         }
     },
     "definitions": {
+        "Group" : {
+            "type": "object",
+            "description": "A group of users and the permissions for that group.",
+            "required": [
+                "members",
+                "permissions"
+            ],
+            "properties": {
+                "members": {
+                    "description": "Array of user IDs in this group.",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "permissions": {
+                    "description": "Permissions for this group.",
+                    "$ref": "#/definitions/PermissionSet"
+                }
+            }
+        },
         "PermissionSet": {
             "type": "object",
             "required": [
