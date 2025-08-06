@@ -49,10 +49,6 @@ ngrok http <port_number>
 
 This will provide you with a public https URL that you can use as the webhook URL in the Ditto portal.
 
-## Endpoints
-- **`/`** - Health check endpoint, returns server status and timestamp
-- **`/auth`** - Authentication endpoint, returns a Ditto-formatted authentication response with permissions. This is the endpoint that should be specified as the webhook in the Ditto portal.
-
 ## Configuration Reference
 
 ### Fields

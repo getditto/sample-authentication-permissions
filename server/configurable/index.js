@@ -40,19 +40,9 @@ class AuthWebhook {
     }
 
     /**
-     * Sets up the endpoints for the Auth Webhook.
+     * Sets up endpoints for the Auth Webhook.
      */
     setupEndpoints() {
-        // Health check endpoint
-        this.app.get('/', (_, res) => {
-            res.json({
-                status: 'running',
-                service: 'Auth Webhook',
-                timestamp: new Date().toISOString()
-            });
-        });
-
-        // Generic Auth endpoint
         this.app.post('/auth', (req, res) => {
             try {
                 const result = this.handleAuth(req);
