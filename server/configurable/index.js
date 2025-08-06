@@ -242,16 +242,33 @@ class AuthWebhook {
      * @returns {*} - The value at the path or undefined
      */
     getNestedValue(obj, path) {
-        // First, try the entire path as a single key (handles keys with dots)
-        if (obj.hasOwnProperty(path)) {
-            return obj[path];
+        let currentObj = obj;
+        let remainingPath = path;
+
+        // Users can use dots in keys but they are also used for nested paths.
+        // So we need to handle both cases by progressively checking keys.
+        while (remainingPath !== '') {
+            const parts = remainingPath.split('.');
+            let found = false;
+
+            // Try progressively longer key combinations
+            for (let i = 1; i <= parts.length; i++) {
+                const key = parts.slice(0, i).join('.');
+
+                if (currentObj.hasOwnProperty(key)) {
+                    currentObj = currentObj[key];
+                    remainingPath = parts.slice(i).join('.');
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return undefined; // No match found
+            }
         }
-        
-        // If that doesn't work, fall back to dot notation splitting
-        const split = path.split('.');
-        return split.reduce((current, key) =>
-            current && typeof current === 'object' ? current[key] : undefined, obj
-        );
+
+        return currentObj;
     }
 
     /**
