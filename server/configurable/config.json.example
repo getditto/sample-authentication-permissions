@@ -1,6 +1,6 @@
 {
     "$schema": "./config_schema.json",
-    "userIDField": "https://mydittoapp.com/name",
+    "userIDField": "http://mydittoapp.com/name",
     "defaultExpirationSeconds": 3600,
     "JWTSecret": "a-string-secret-at-least-256-bits-long",
     "clientInfo": {
