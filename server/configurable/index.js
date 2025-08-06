@@ -105,6 +105,9 @@ class AuthWebhook {
     createPayload(decoded) {
         const userIDField = this.config.userIDField;
         const userID = this.getNestedValue(decoded, userIDField);
+        if (!userID) {
+            throw Object.assign(new Error(`User ID field "${userIDField}" not found in token`), { status: 500 });
+        }
         const permissions = this.permissionsMap[userID]
 
         if (!permissions) {
