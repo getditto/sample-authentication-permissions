@@ -242,7 +242,14 @@ class AuthWebhook {
      * @returns {*} - The value at the path or undefined
      */
     getNestedValue(obj, path) {
-        return path.split('.').reduce((current, key) =>
+        // First, try the entire path as a single key (handles keys with dots)
+        if (obj.hasOwnProperty(path)) {
+            return obj[path];
+        }
+        
+        // If that doesn't work, fall back to dot notation splitting
+        const split = path.split('.');
+        return split.reduce((current, key) =>
             current && typeof current === 'object' ? current[key] : undefined, obj
         );
     }
