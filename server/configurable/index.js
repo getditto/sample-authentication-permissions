@@ -33,8 +33,8 @@ class AuthWebhook {
         this.config.defaultExpirationSeconds = this.config.defaultExpirationSeconds || 3600;
 
         // Check for required fields
-        if (!this.config.roles) {
-            throw new Error('The "roles" field is required in the config.');
+        if (!this.config.roles || !this.config.userIDField) {
+            throw new Error('The config is invalid.');
         }
         this.buildClaimsMap();
     }

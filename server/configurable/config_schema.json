@@ -4,7 +4,8 @@
     "description": "JSON configuration for the generic authentication webhook.",
     "type": "object",
     "required": [
-        "roles"
+        "roles",
+        "userIDField"
     ],
     "properties": {
         "JWTSecret": {
@@ -13,8 +14,7 @@
         },
         "userIDField": {
             "description": "The JWT field containing the user ID. In the form 'path.to.userID'.",
-            "type": "string",
-            "default": "sub"
+            "type": "string"
         },
         "defaultExpirationSeconds": {
             "description": "Default session expiration in seconds if JWT has no exp field.",
