@@ -58,7 +58,7 @@ This will provide you with a public https URL that you can use as the webhook UR
 ### Fields
 
 - **`JWTSecret`** (string, optional): The secret used to sign the JWTs used by the server to verify the JWT, if none is provided no verification is performed.
-- **`userIDField`** (string): The field in the JWT that contains the user ID in the form `path.to.userID`. You may need to configure your identity service to include a user ID in the JWT.
+- **`userIDField`** (string): The field in the JWT that contains the user ID in the form `path.to.userID`. You may need to configure your identity service to include some sort of user ID in the JWT.
 - **`defaultExpirationSeconds`** (int, optional): The default expiration time for the JWT in seconds, will be used if no `exp` field is present in the JWT.
 - **`clientInfo`** (object | array, optional): Information to be passed through to the response. Can be a single JSON object which will be passed through as-is, or an array of paths to fields in the JWT that should be included in the response.
 - **`identityServiceMetadata`** (object | array, optional): Metadata about the identity service. Can be a single JSON object which will be passed through as-is, or an array of paths to fields in the JWT that should be included in the response.
@@ -118,7 +118,7 @@ To create the webhook configuration, you will need to create a `config.json` fil
 
 ```json
 {
-    "JWTSecret": "your-jwt-secret" # Replace this with your actual JWT secret (found in the Auth0 dashboard), or remove this field if you don't want to verify the JWT.
+    "JWTSecret": "your-jwt-secret" # Replace this with your actual JWT secret used for verification, or remove this field if you don't want to verify the JWT.
     "userIDField": "http://mydittoapp.com/name", # This is the path to the user ID in the JWT, which we set in the Auth0 rule above.
     "roles": {
         "admin": {
