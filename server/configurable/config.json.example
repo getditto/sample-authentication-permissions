@@ -1,44 +1,28 @@
 {
     "$schema": "./config_schema.json",
-    "userIDField": "http://mydittoapp.com/name",
-    "defaultExpirationSeconds": 3600,
-    "JWTSecret": "a-string-secret-at-least-256-bits-long",
-    "clientInfo": {
-        "info": "This is some client info"
+    "userIDField": "sub",
+    "expirationField": {
+        "field": "exp",
+        "format": "unix"
     },
-    "identityServiceMetadata": {
-        "metadata": "This is some identity service metadata"
+    "claims": {
+        "appRoles": {
+            "admin": "all",
+            "standardUser": "standard",
+            "guest": "standard"
+        }
     },
-    "roles": {
-        "admin": {
-            "members": [
-                "Account 1"
-            ],
-            "permissions": {
-                "read": "*",
-                "write": "*"
-            }
+    "permissions": {
+        "all": {
+            "read": "*",
+            "write": "*"
         },
-        "normal_user": {
-            "members": [
-                "Account 2"
-            ],
-            "permissions": {
-                "read": "*",
-                "write": {}
-            }
-        },
-        "guest": {
-            "members": [
-                "Account 3"
-            ],
-            "permissions": {
-                "read": {
-                    "tasks": [" _id == '688ce8e000062161004e3cfa'"]
-                },
-                "write": {
-                    "tasks": [" _id == '688ce8e000062161004e3cfa'"]
-                }
+        "standard": {
+            "read": {
+                "tasks": ["_id == '68935a33005a7e6e00e1b4aa'"]
+            },
+            "write": {
+                "tasks": ["_id == '68935a33005a7e6e00e1b4aa'"]
             }
         }
     }

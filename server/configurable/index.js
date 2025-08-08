@@ -5,13 +5,83 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const { jwtDecode } = require('jwt-decode');
 const jwt = require('jsonwebtoken');
+const dayjs = require('dayjs');
+
+
+class ConfigError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'ConfigError';
+    }
+}
+
+class AuthError extends Error {
+    constructor(message, statusCode = 500) {
+        super(message);
+        this.name = 'AuthError';
+        this.status = statusCode;
+    }
+}
+
+class Config {
+    constructor(config) {
+        // Validate the configuration
+        Config.validate(config);
+
+        // Now we can assign values
+
+        // These are the required fields
+        this.claims = config.claims;
+        this.permissions = config.permissions;
+        this.userIDField = config.userIDField;
+
+        // Optional fields
+        this.expirationField = { // This will set the defaults if not provided
+            field: 'exp',
+            format: 'unix',
+            ...config.expirationField
+        };
+        this.JWTSecret = config.JWTSecret || undefined;
+        this.clientInfo = config.clientInfo || {};
+        this.identityServiceMetadata = config.identityServiceMetadata || {};
+    }
+
+    /**
+     * Validates the configuration checking for all required fields. 
+     */
+    static validate(config) {
+        // Check for required fields
+        const required = ['claims', 'permissions', 'userIDField'];
+        const missing = required.filter(field => !config[field]);
+        if (missing.length > 0) {
+            throw new ConfigError(`Missing config fields: ${missing.join(', ')}`);
+        }
+
+        // Check all permissions sets are defined
+        Object.entries(config.claims).forEach(([name, perm]) => {
+            Object.entries(perm).forEach(([value, permissionSet]) => {
+                if (!config.permissions[permissionSet]) {
+                    throw new ConfigError(`Claim '${name}' with value '${value}' references undefined permission set '${permissionSet}'`);
+                }
+            });
+        });
+
+        // Check all permissions have read and write defined
+        Object.entries(config.permissions).forEach(([name, perm]) => {
+            if (!perm.read || !perm.write) {
+                throw new ConfigError(`Permission set '${name}' must define read and write permissions`);
+            }
+        });
+    }
+}
 
 class AuthWebhook {
     constructor() {
         this.app = express();
         this.app.use(cors());
         this.app.use(bodyParser.json());
-        this.permissionsMap = {};
+
+        this.config = new Config(require('./config.json'));
 
         // Logging middleware
         this.app.use((req, _, next) => {
@@ -19,40 +89,12 @@ class AuthWebhook {
             next();
         });
 
-        this.loadConfig();
-        this.setupEndpoints();
-    }
-
-    /**
-     * Loads the configuration from config.json.
-     */
-    loadConfig() {
-        this.config = require('./config.json');
-        // Set default values if not present
-        this.config.userIDField = this.config.userIDField || 'sub';
-        this.config.defaultExpirationSeconds = this.config.defaultExpirationSeconds || 3600;
-
-        // Check for required fields
-        if (!this.config.roles || !this.config.userIDField) {
-            throw new Error('The config is invalid.');
-        }
-        this.buildClaimsMap();
-    }
-
-    /**
-     * Sets up endpoints for the Auth Webhook.
-     */
-    setupEndpoints() {
         this.app.post('/auth', (req, res) => {
             try {
-                const result = this.handleAuth(req);
-                res.status(200).json(result);
+                const payload = this.handleAuth(req);
+                res.status(200).json(payload);
             } catch (error) {
-                if (error.status) {
-                    return res.status(error.status).json({ error: error.message });
-                }
-                // If no status is set, return 500
-                res.status(500).json({ error: 'Internal server error' });
+                res.status(error.status).json({ error: error.message });
             }
         });
     }
@@ -62,69 +104,84 @@ class AuthWebhook {
      */
     decodeJWT(token) {
         try {
+            // If we have a secret, verify the token signature
             if (this.config.JWTSecret) {
                 return jwt.verify(token, this.config.JWTSecret);
+            } else {
+                // If no secret, just decode without verification
+                return jwtDecode(token);
             }
-            return jwtDecode(token);
         } catch (error) {
-            throw Object.assign(new Error('Invalid token'), { status: 401 });
+            throw new AuthError('Invalid token', 400);
         }
     }
 
     /**
-     * Builds the permissions map from the configuration.
-     * This structure maps a user ID to their permissions based on the roles they belong to.
-     */
-    buildClaimsMap() {
-        this.permissionsMap = {};
-
-        // Go through each role in the permissions config
-        Object.entries(this.config.roles).forEach(([_, { members, permissions }]) => {
-            // Go through each user in the role
-            const readPermissions = this.convertPermissionFormat(permissions.read);
-            const writePermissions = this.convertPermissionFormat(permissions.write);
-            const remoteQuery = permissions.remoteQuery;
-
-            members.forEach(user => {
-                // For each member merge their permissions
-                const existingPerms = this.permissionsMap[user] || { read: { everything: false, queriesByCollection: {} }, write: { everything: false, queriesByCollection: {} } };
-                this.permissionsMap[user] = {
-                    read: this.mergePermissions(existingPerms.read, readPermissions),
-                    write: this.mergePermissions(existingPerms.write, writePermissions),
-                    remoteQuery
-                };
-            });
-        });
-    }
-
-    /**
-     * Creates the payload for the response based on the decoded JWT.
+     * Gets permissions for the request based on the decoded JWT.
      * @param {Object} decoded - The decoded JWT payload.
-     * @returns {Object} - The payload to be returned in the response.
+     * @returns {Object} - The permissions object.
      */
-    createPayload(decoded) {
-        const userIDField = this.config.userIDField;
-        const userID = this.getNestedValue(decoded, userIDField);
-        if (!userID) {
-            throw Object.assign(new Error(`User ID field "${userIDField}" not found in token`), { status: 500 });
-        }
-        const permissions = this.permissionsMap[userID]
+    getPermissions(decoded) {
+        let permissions = {};
 
-        if (!permissions) {
+        // Process each claim in the config
+        for (const [claimPath, claimConfig] of Object.entries(this.config.claims)) {
+            const claimValue = this.getNestedValue(decoded, claimPath);
+            if (!claimValue) continue;
+
+            // Normalize claimValue to always be an array for consistent processing
+            const claimValues = Array.isArray(claimValue) ? claimValue : [claimValue];
+
+            // Process each claim value (handles both single values and arrays)
+            for (const value of claimValues) {
+                // Get permission set name and configuration
+                const permissionSetName = claimConfig[value];
+                const permissionSet = this.config.permissions[permissionSetName];
+                if (!permissionSet) continue;
+
+                // Merge permissions
+                permissions = {
+                    read: this.mergePermissions(permissions.read || {}, this.convertPermissionFormat(permissionSet.read)),
+                    write: this.mergePermissions(permissions.write || {}, this.convertPermissionFormat(permissionSet.write)),
+                    remoteQuery: permissionSet.remoteQuery !== undefined ? permissionSet.remoteQuery : false
+                };
+            }
+        }
+        return permissions;
+    }
+
+    /**
+     * Creates the response for the request based on the decoded JWT.
+     * @param {Object} decoded - The decoded JWT payload.
+     * @returns {Object} - The response to be returned.
+     */
+    createResponse(decoded) {
+        const expirationSeconds = this.calculateExpiration(decoded);
+        if (expirationSeconds <= 0) {
+            throw new AuthError('Token has expired', 401);
+        }
+
+        const permissions = this.getPermissions(decoded);
+
+        if (Object.keys(permissions).length === 0) {
             return { authenticated: false };
         }
 
         const response = {
             authenticated: true,
-            userID,
-            expirationSeconds: this.calculateExpiration(decoded),
+            userID: this.getNestedValue(decoded, this.config.userIDField),
+            expirationSeconds,
             permissions
         };
 
         // Add optional fields
         ['clientInfo', 'identityServiceMetadata'].forEach(field => {
             if (this.config[field]) {
-                response[field] = this.extractConfigField(decoded, field);
+                const value = this.extractConfigField(decoded, field);
+                // If the value is not empty, add it to the response
+                if (Object.keys(value).length > 0) {
+                    response[field] = value;
+                }
             }
         });
 
@@ -159,36 +216,41 @@ class AuthWebhook {
      * @param {*} req - The request object.
      * @returns {Object} - The authentication result.
      */
-    handleAuth(req) {
+    async handleAuth(req) {
         const token = req.body.token;
-
         if (!token) {
-            const error = new Error('Token is required');
-            error.status = 400;
-            throw error;
+            throw new AuthError('No token provided', 400);
         }
-
         let decoded = this.decodeJWT(token);
-
-        // Check if the token has expired
-        if (decoded.exp && decoded.exp < Math.floor(Date.now() / 1000)) {
-            throw Object.assign(new Error('Token has expired'), { status: 401 });
-        }
-
-        const payload = this.createPayload(decoded);
-
-        return payload;
+        return this.createResponse(decoded);
     }
 
     /**
      * Calculates the expiration time based on the decoded token.
      * @param {Object} decoded - The decoded JWT payload.
-     * @param {number} defaultExpiration - The default expiration time in seconds.
      * @returns {number} - The time until expiration in seconds.
      */
     calculateExpiration(decoded) {
-        if (!decoded.exp) return this.config.defaultExpirationSeconds;
-        return Math.max(0, decoded.exp - Math.floor(Date.now() / 1000));
+        const expirationField = this.config.expirationField.field;
+        if (!decoded[expirationField]) {
+            throw new AuthError(`Token does not contain expiration field '${expirationField}'`, 400);
+        }
+
+        const expirationFormat = this.config.expirationField.format;
+        var expirationTime = decoded[expirationField];
+
+        let parsedTime;
+        if (expirationFormat === 'unix') {
+            // Usually in JWTs this is a Unix timestamp in seconds
+            parsedTime = dayjs.unix(expirationTime);
+        } else {
+            // If it's not Unix then the format is specified by the user
+            parsedTime = dayjs(expirationTime, expirationFormat);
+        }
+
+        // Get seconds until expiration
+        const secondsUntilExpiration = parsedTime.diff(Date.now(), 'second');
+        return secondsUntilExpiration
     }
 
     /**
