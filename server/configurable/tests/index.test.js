@@ -105,7 +105,7 @@ describe('AuthWebhook', () => {
         });
 
         test('should handle users with no permissions', () => {
-            const decoded = { "sub": 'UnknownUser', "exp": Math.floor(Date.now() / 1000) + 61 };
+            const decoded = { "sub": 'UnknownUser', "exp": Math.floor(Date.now() / 1000) + 60 };
             const payload = authWebhook.createResponse(decoded);
             expect(payload).toEqual({
                 authenticated: false
@@ -113,7 +113,7 @@ describe('AuthWebhook', () => {
         });
 
         test('should handle the case where a permission set is not defined', () => {
-            const decoded = { "role": 'nonExistentRole', "sub": "User3", "exp": Math.floor(Date.now() / 1000) + 61 };
+            const decoded = { "role": 'nonExistentRole', "sub": "User3", "exp": Math.floor(Date.now() / 1000) + 60 };
             const payload = authWebhook.createResponse(decoded);
             expect(payload).toEqual({
                 authenticated: false

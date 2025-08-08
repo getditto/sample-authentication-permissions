@@ -98,7 +98,8 @@ class AuthWebhook {
                 const payload = this.handleAuth(req);
                 res.status(200).json(payload);
             } catch (error) {
-                // An error occured send back the user is unauthenticated
+                // An error occured send back the user is unauthenticated and log the error
+                console.error('Error during authentication:', error.message);
                 res.status(401).json({ authenticated: false });
             }
         });
