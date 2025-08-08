@@ -115,7 +115,7 @@ More details on the configuration schema can be found in `config_schema.json` an
 Here we provide an example of using the [quickstart app](https://github.com/getditto/quickstart) along with the configurable authentication webhook.
 
 ## Example configuration
-In this example we have three potential user roles: `admin`, `standardUser`, and `guest`. The `admin` role has full permissions, while the `standardUser` and `guest` roles have limited permissions to read and write only one specific task.
+In this example we have three potential user roles: `admin`, `standardUser`, and `guest`. The `admin` role has full permissions, while the `standardUser` and `guest` roles have limited permissions to read and write only one specific task. It is also the case that the expiration time is expected to be provided in the JWT in the `exp` field as a unix timestamp.
 
 ```json
 {
@@ -126,7 +126,7 @@ In this example we have three potential user roles: `admin`, `standardUser`, and
         "format": "unix"
     },
     "claims": {
-        "appRoles": {
+        "roles": {
             "admin": "all",
             "standardUser": "standard",
             "guest": "standard"
