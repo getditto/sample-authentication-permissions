@@ -8,6 +8,8 @@ const jwt = require('jsonwebtoken');
 const dayjs = require('dayjs');
 
 
+// Config errors are thrown if something in the config is not valid
+// This should only be thrown during initialization of the AuthWebhook class (not when the server is running)
 class ConfigError extends Error {
     constructor(message) {
         super(message);
@@ -15,6 +17,8 @@ class ConfigError extends Error {
     }
 }
 
+// Auth errors are thrown if something goes wrong during the authentication process
+// When this happens we assume the user is unauthenticated
 class AuthError extends Error {
     constructor(message, statusCode = 500) {
         super(message);
@@ -94,7 +98,8 @@ class AuthWebhook {
                 const payload = this.handleAuth(req);
                 res.status(200).json(payload);
             } catch (error) {
-                res.status(error.status).json({ error: error.message });
+                // An error occured send back the user is unauthenticated
+                res.status(401).json({ authenticated: false });
             }
         });
     }
