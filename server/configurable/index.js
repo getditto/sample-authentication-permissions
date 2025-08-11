@@ -28,6 +28,12 @@ class AuthError extends Error {
 }
 
 class Config {
+    static #REQUIRED_FIELDS = ['claims', 'permissions', 'userIDField'];
+    static #DEFAULT_EXPIRATION_FIELD = {
+        field: 'exp',
+        format: 'unix'
+    };
+
     constructor(config) {
         // Validate the configuration
         Config.validate(config);
@@ -40,9 +46,8 @@ class Config {
         this.userIDField = config.userIDField;
 
         // Optional fields
-        this.expirationField = { // This will set the defaults if not provided
-            field: 'exp',
-            format: 'unix',
+        this.expirationField = {
+            ...Config.#DEFAULT_EXPIRATION_FIELD,
             ...config.expirationField
         };
         this.JWTSecret = config.JWTSecret || undefined;
@@ -55,8 +60,7 @@ class Config {
      */
     static validate(config) {
         // Check for required fields
-        const required = ['claims', 'permissions', 'userIDField'];
-        const missing = required.filter(field => !config[field]);
+        const missing = Config.#REQUIRED_FIELDS.filter(field => !config[field]);
         if (missing.length > 0) {
             throw new ConfigError(`Missing config fields: ${missing.join(', ')}`);
         }
@@ -93,9 +97,9 @@ class AuthWebhook {
             next();
         });
 
-        this.app.post('/auth', (req, res) => {
+        this.app.post('/auth', async (req, res) => {
             try {
-                const payload = this.handleAuth(req);
+                const payload = await this.handleAuth(req);
                 res.status(200).json(payload);
             } catch (error) {
                 // An error occured send back the user is unauthenticated and log the error
