@@ -39,16 +39,6 @@ node server.js
 PORT=4000 node server.js
 ```
 
-#### Running locally
-
-In order to run the webhook locally you need to expose your local machine to the internet via an https connection. For testing and demo purposes this can be done using tools like [ngrok](https://ngrok.com/docs) by running the following command after installing ngrok, replacing `<port_number>` with the port your server is running on:
-
-```bash
-ngrok http <port_number>
-```
-
-This will provide you with a public https URL that you can use as the webhook URL in the Ditto portal.
-
 ## Configuration Reference
 
 ### Fields
