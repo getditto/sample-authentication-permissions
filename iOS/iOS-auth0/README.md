@@ -16,4 +16,4 @@
 
 ## Access Token
 
-Contact us at [support@ditto.live](support@ditto.live) to request a free license token!
+Contact us at [support@ditto.com](mailto:support@ditto.com) to request a free license token!
